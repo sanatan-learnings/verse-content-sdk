@@ -23,46 +23,43 @@ pip install -e .
 
 ## Usage
 
-### Generate Embeddings (Local)
-```python
-from verse_content_sdk.embeddings import generate_local_embeddings
+### Command-Line Tools (Recommended)
 
-generate_local_embeddings(
-    input_dir="_verses",
-    output_file="data/embeddings.json",
-    model="all-MiniLM-L6-v2"
-)
+After installation, the SDK provides command-line tools:
+
+#### Generate Embeddings
+```bash
+# Using OpenAI (default)
+verse-embeddings --verses-dir _verses --output data/embeddings.json
+
+# Using local models (free)
+verse-embeddings --verses-dir _verses --output data/embeddings.json --provider huggingface
+
+# With custom paths
+verse-embeddings --verses-dir path/to/verses --output path/to/output.json
 ```
 
-### Generate Embeddings (OpenAI)
-```python
-from verse_content_sdk.embeddings import generate_openai_embeddings
-
-generate_openai_embeddings(
-    input_dir="_verses",
-    output_file="data/embeddings.json",
-    api_key="your-api-key"
-)
+#### Generate Audio
+```bash
+verse-audio --help  # Coming soon
 ```
 
-### Generate Audio
-```python
-from verse_content_sdk.audio import generate_audio
-
-generate_audio(
-    text="Your verse text",
-    output_path="audio/verse.mp3",
-    voice_id="your-voice-id"
-)
+#### Generate Images
+```bash
+verse-images --help  # Coming soon
 ```
 
-### Generate Images
-```python
-from verse_content_sdk.images import generate_image
+### Python API (For Custom Scripts)
 
-generate_image(
-    prompt="Your image prompt",
-    output_path="images/verse.png"
+You can also import and use the SDK in your Python code:
+
+```python
+from verse_content_sdk.embeddings import generate_embeddings
+
+generate_embeddings(
+    verses_dir="path/to/_verses",
+    output_file="path/to/embeddings.json",
+    provider="openai"  # or "huggingface"
 )
 ```
 
