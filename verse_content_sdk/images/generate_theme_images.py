@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """
-Generate Hanuman Chalisa verse images using DALL-E 3.
+Generate verse images using DALL-E 3.
 
 This script combines scene descriptions from docs/image-prompts.md with visual
-style specifications from docs/themes/<theme-name>.yml to generate all 47 images
+style specifications from docs/themes/<theme-name>.yml to generate images
 using OpenAI's DALL-E 3 API.
+
+Supports both:
+- Chapter-based texts (Bhagavad Gita): "Chapter X, Verse Y" format
+- Simple verse texts (Hanuman Chalisa): "Verse X" format
 
 Architecture:
     1. Scene descriptions (what's happening) come from docs/image-prompts.md
@@ -12,7 +16,7 @@ Architecture:
     3. Script combines both to create complete DALL-E 3 prompts
 
 Usage:
-    python scripts/generate_theme_images.py --theme-name kids-friendly
+    verse-images --theme-name modern-minimalist
 
 Requirements:
     pip install openai requests pillow pyyaml
@@ -33,8 +37,10 @@ except ImportError:
     yaml = None
 
 # Configuration
-DOCS_DIR = Path(__file__).parent.parent / "docs"
-IMAGES_DIR = Path(__file__).parent.parent / "images"
+# Use current working directory (where the user runs the command)
+# This allows the SDK to work with any project structure
+DOCS_DIR = Path.cwd() / "docs"
+IMAGES_DIR = Path.cwd() / "images"
 THEMES_DIR = DOCS_DIR / "themes"
 PROMPTS_FILE = DOCS_DIR / "image-prompts.md"
 
@@ -109,14 +115,26 @@ class ImageGenerator:
             prompts[filename] = scene_desc.strip()
 
         # Extract verse scene descriptions
-        verse_sections = re.findall(
-            r'### Verse (\d+):.*?\*\*Scene Description\*\*:\s*(.*?)(?=\n---|\n###|\Z)',
+        # Try Chapter X, Verse Y format first (for Bhagavad Gita)
+        chapter_verse_sections = re.findall(
+            r'### Chapter (\d+),\s*Verse (\d+).*?\*\*Scene Description\*\*:\s*(.*?)(?=\n---|\n###|\Z)',
             content,
             re.DOTALL
         )
-        for verse_num, scene_desc in verse_sections:
-            filename = f'verse-{verse_num.zfill(2)}.png'
-            prompts[filename] = scene_desc.strip()
+        if chapter_verse_sections:
+            for chapter_num, verse_num, scene_desc in chapter_verse_sections:
+                filename = f'chapter-{chapter_num.zfill(2)}-verse-{verse_num.zfill(2)}.png'
+                prompts[filename] = scene_desc.strip()
+        else:
+            # Fall back to simple Verse X format (for Hanuman Chalisa)
+            verse_sections = re.findall(
+                r'### Verse (\d+):.*?\*\*Scene Description\*\*:\s*(.*?)(?=\n---|\n###|\Z)',
+                content,
+                re.DOTALL
+            )
+            for verse_num, scene_desc in verse_sections:
+                filename = f'verse-{verse_num.zfill(2)}.png'
+                prompts[filename] = scene_desc.strip()
 
         # Extract closing doha scene description
         closing_match = re.search(
@@ -214,21 +232,35 @@ class ImageGenerator:
 
     def generate_all_images(self, start_from: Optional[str] = None) -> None:
         """
-        Generate all 47 images for the theme.
+        Generate all images for the theme.
 
         Args:
             start_from: Optional filename to start from (useful for resuming)
         """
         prompts = self.parse_prompts_file()
 
-        # Sort prompts in logical order
-        ordered_files = ['title-page.png']
-        ordered_files += [f'opening-doha-{i:02d}.png' for i in range(1, 3)]
-        ordered_files += [f'verse-{i:02d}.png' for i in range(1, 41)]
-        ordered_files += ['closing-doha.png']
+        # Detect format: check if we have chapter-verse format or simple verse format
+        has_chapters = any('chapter-' in f for f in prompts.keys())
 
-        # Filter to only include files with prompts
-        ordered_files = [f for f in ordered_files if f in prompts]
+        if has_chapters:
+            # Bhagavad Gita format: sort by chapter and verse
+            # Extract all chapter-verse combinations from prompts and sort them
+            ordered_files = sorted(
+                [f for f in prompts.keys() if f.startswith('chapter-')],
+                key=lambda x: (
+                    int(re.search(r'chapter-(\d+)', x).group(1)),
+                    int(re.search(r'verse-(\d+)', x).group(1))
+                )
+            )
+        else:
+            # Hanuman Chalisa format: original sorting logic
+            ordered_files = ['title-page.png']
+            ordered_files += [f'opening-doha-{i:02d}.png' for i in range(1, 3)]
+            ordered_files += [f'verse-{i:02d}.png' for i in range(1, 41)]
+            ordered_files += ['closing-doha.png']
+
+            # Filter to only include files with prompts
+            ordered_files = [f for f in ordered_files if f in prompts]
 
         # Start from specific file if requested
         if start_from:
@@ -305,7 +337,7 @@ def load_theme_config(theme_name: str) -> Optional[Dict]:
 def main():
     """Main entry point for the script."""
     parser = argparse.ArgumentParser(
-        description='Generate Hanuman Chalisa verse images using DALL-E 3',
+        description='Generate verse images using DALL-E 3 (supports both chapter-based and simple verse formats)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -391,6 +423,17 @@ Cost Estimate:
         default='natural',
         help='DALL-E style type (default: natural)'
     )
+    parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Force regenerate ALL images (deletes entire theme directory with confirmation)'
+    )
+    parser.add_argument(
+        '--regenerate',
+        default=None,
+        metavar='FILES',
+        help='Regenerate specific images (comma-separated, e.g., verse-10.png,verse-25.png)'
+    )
 
     args = parser.parse_args()
 
@@ -406,6 +449,12 @@ Cost Estimate:
         print("  python scripts/generate_theme_images.py --theme-name my-theme")
         sys.exit(1)
 
+    # Check for conflicting options
+    if args.force and args.regenerate:
+        print("Error: Cannot use --force and --regenerate together")
+        print("Use --force to regenerate ALL images, or --regenerate for specific images")
+        sys.exit(1)
+
     # Update global configuration
     global IMAGE_SIZE, IMAGE_QUALITY, IMAGE_STYLE
     IMAGE_SIZE = args.size
@@ -416,6 +465,61 @@ Cost Estimate:
     if not re.match(r'^[a-z0-9-]+$', args.theme_name):
         print("Error: Theme name must contain only lowercase letters, numbers, and hyphens")
         sys.exit(1)
+
+    # Handle --force option
+    if args.force:
+        images_dir = IMAGES_DIR / args.theme_name
+        if images_dir.exists():
+            image_files = list(images_dir.glob("*.png"))
+            if image_files:
+                print(f"\n⚠️  WARNING: Force regeneration will delete {len(image_files)} existing images!")
+                print(f"Theme directory: {images_dir}")
+                print()
+                response = input("Are you sure you want to delete and regenerate ALL images? (y/n): ")
+
+                if response.lower() in ['y', 'yes']:
+                    print()
+                    print("Deleting existing theme directory...")
+                    import shutil
+                    shutil.rmtree(images_dir)
+                    print(f"✓ Deleted: {images_dir}")
+                    print("Will now regenerate all images...")
+                    print()
+                else:
+                    print("Aborted. No images were deleted.")
+                    sys.exit(0)
+            else:
+                print("No existing images found. Will generate all images.")
+                print()
+        else:
+            print("Theme directory not found. Will create and generate all images.")
+            print()
+
+    # Handle --regenerate option
+    if args.regenerate:
+        images_dir = IMAGES_DIR / args.theme_name
+        if not images_dir.exists():
+            print(f"Error: Theme directory not found: {images_dir}")
+            sys.exit(1)
+
+        print("Preparing to regenerate specific images...")
+        files_to_regenerate = [f.strip() for f in args.regenerate.split(',')]
+        deleted_count = 0
+
+        for filename in files_to_regenerate:
+            file_path = images_dir / filename
+            if file_path.exists():
+                file_path.unlink()
+                print(f"  ✓ Deleted: {filename}")
+                deleted_count += 1
+            else:
+                print(f"  ⚠ Not found (will generate): {filename}")
+
+        print()
+        if deleted_count > 0:
+            print(f"Deleted {deleted_count} existing image(s).")
+        print("Will now regenerate missing images...")
+        print()
 
     # Try to load theme configuration
     theme_config = load_theme_config(args.theme_name)

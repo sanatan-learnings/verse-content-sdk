@@ -50,7 +50,9 @@ except ImportError:
 load_dotenv()
 
 # Project paths
-PROJECT_DIR = Path(__file__).parent.parent
+# Use current working directory (where the user runs the command)
+# This allows the SDK to work with any project structure
+PROJECT_DIR = Path.cwd()
 VERSES_DIR = PROJECT_DIR / "_verses"
 AUDIO_DIR = PROJECT_DIR / "audio"
 
@@ -389,6 +391,11 @@ def main():
         default=DEFAULT_VOICE_ID,
         metavar="VOICE_ID"
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force regenerate ALL audio files (deletes all existing MP3s with confirmation)"
+    )
 
     args = parser.parse_args()
 
@@ -401,6 +408,45 @@ def main():
         print("  2. Create .env file with: ELEVENLABS_API_KEY=your-key-here")
         print("\nGet your API key from: https://elevenlabs.io/app/settings/api-keys")
         sys.exit(1)
+
+    # Check for conflicting options
+    if args.force and args.regenerate:
+        print("Error: Cannot use --force and --regenerate together")
+        print("Use --force to regenerate ALL files, or --regenerate for specific files")
+        sys.exit(1)
+
+    if args.force and args.only:
+        print("Error: Cannot use --force and --only together")
+        print("Use --force to regenerate ALL files, or --only for a single file")
+        sys.exit(1)
+
+    # Handle --force option
+    if args.force:
+        if AUDIO_DIR.exists():
+            audio_files = list(AUDIO_DIR.glob("*.mp3"))
+            if audio_files:
+                print(f"\n⚠️  WARNING: Force regeneration will delete {len(audio_files)} existing audio files!")
+                print(f"Directory: {AUDIO_DIR}")
+                print()
+                response = input("Are you sure you want to delete and regenerate ALL audio files? (y/n): ")
+
+                if response.lower() in ['y', 'yes']:
+                    print()
+                    print("Deleting existing audio files...")
+                    for f in audio_files:
+                        f.unlink()
+                    print(f"✓ Deleted {len(audio_files)} audio file(s)")
+                    print("Will now regenerate all audio files...")
+                    print()
+                else:
+                    print("Aborted. No files were deleted.")
+                    sys.exit(0)
+            else:
+                print("No existing audio files found. Will generate all files.")
+                print()
+        else:
+            print("Audio directory not found. Will create and generate all files.")
+            print()
 
     # Parse regenerate files if provided
     regenerate_files = None
