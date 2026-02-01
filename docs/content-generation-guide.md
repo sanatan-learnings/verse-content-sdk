@@ -11,21 +11,65 @@ This guide explains how to generate multimedia content (text, images, and audio)
    ELEVENLABS_API_KEY=your_elevenlabs_api_key
    ```
 
-## Quick Start: Generate Everything for a Verse
+## Quick Start: Automated Generation with GPT-4
 
-The easiest way to generate all content for a verse is using the unified `verse-generate` command:
+The easiest way to generate all content for a verse is using the unified `verse-generate` command with GPT-4:
 
 ```bash
-# Generate image and audio for Chapter 3, Verse 10
-verse-generate --chapter 3 --verse 10 --image --audio
+# Generate everything (text, scene description, image, audio) for Chapter 3, Verse 5
+verse-generate --chapter 3 --verse 5 --all \
+  --sanskrit "न हि कश्चित्क्षणमपि जातु तिष्ठत्यकर्मकृत्।
+कार्यते ह्यवशः कर्म सर्वः प्रकृतिजैर्गुणैः।।" \
+  --chapter-name-en "Karma Yoga" \
+  --chapter-name-hi "कर्म योग"
 
-# Generate everything (including text placeholder)
-verse-generate --chapter 3 --verse 10 --all
+# Generate only scene description (image prompt)
+verse-generate --chapter 3 --verse 5 --prompt \
+  --sanskrit "न हि कश्चित्क्षणमपि जातु तिष्ठत्यकर्मकृत्।
+कार्यते ह्यवशः कर्म सर्वः प्रकृतिजैर्गुणैः।।"
+
+# Generate only image and audio (requires existing scene description and verse file)
+verse-generate --chapter 3 --verse 10 --image --audio
 ```
+
+**What Gets Generated:**
+- `--text`: Complete verse markdown file with translations, meanings, interpretations (GPT-4)
+- `--prompt`: Scene description in docs/image-prompts.md (GPT-4)
+- `--image`: Visual artwork in images/ directory (DALL-E 3)
+- `--audio`: Pronunciation files in audio/ directory (ElevenLabs)
+- `--all`: All of the above
+
+## Automated Workflow (Recommended)
+
+The fully automated workflow uses GPT-4 to generate all content from just the Sanskrit text:
+
+```bash
+# Step 1: Provide Sanskrit verse
+verse-generate --chapter 3 --verse 5 --all \
+  --sanskrit "न हि कश्चित्क्षणमपि जातु तिष्ठत्यकर्मकृत्।
+कार्यते ह्यवशः कर्म सर्वः प्रकृतिजैर्गुणैः।।" \
+  --chapter-name-en "Karma Yoga" \
+  --chapter-name-hi "कर्म योग"
+
+# This automatically:
+# 1. Generates verse file with translations, meanings, interpretations (GPT-4)
+# 2. Generates scene description for image (GPT-4)
+# 3. Generates image from scene description (DALL-E 3)
+# 4. Generates audio pronunciation (ElevenLabs)
+```
+
+**Generated Files:**
+- `_verses/chapter_03_verse_05.md` - Complete verse content
+- `docs/image-prompts.md` - Scene description appended
+- `images/modern-minimalist/chapter-03-verse-05.png` - Generated artwork
+- `audio/chapter_03_verse_05_full.mp3` - Full speed pronunciation
+- `audio/chapter_03_verse_05_slow.mp3` - Slow speed pronunciation
+
+**Note:** The AI-generated verse content requires manual review and formatting to match the established structure. See existing verse files for reference.
 
 ## Step-by-Step: Manual Generation
 
-If you prefer to generate each component separately:
+If you prefer to generate each component separately or provide your own content:
 
 ### 1. Create Scene Description
 
