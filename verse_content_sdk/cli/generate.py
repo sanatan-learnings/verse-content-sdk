@@ -56,6 +56,59 @@ if os.getenv("OPENAI_API_KEY"):
     openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
+def fetch_sanskrit_text(chapter: Optional[int], verse: int) -> Optional[str]:
+    """Fetch Sanskrit text from GPT-4 for the specified verse."""
+    print(f"\n{'='*60}")
+    print("FETCHING SANSKRIT TEXT FROM GPT-4")
+    print(f"{'='*60}\n")
+
+    if not openai_client:
+        print("Error: OPENAI_API_KEY not set")
+        return None
+
+    if chapter:
+        verse_ref = f"Chapter {chapter}, Verse {verse}"
+    else:
+        verse_ref = f"Verse {verse}"
+
+    print(f"Fetching Sanskrit text for {verse_ref}...")
+
+    prompt = f"""Please provide the exact Sanskrit text in Devanagari script for Bhagavad Gita {verse_ref}.
+
+Provide ONLY the Sanskrit verse text in Devanagari, nothing else. No transliteration, no translation, no explanations - just the pure Devanagari text."""
+
+    try:
+        response = openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a Bhagavad Gita scholar. Provide exact Sanskrit verses in Devanagari script."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,  # Low temperature for accuracy
+            max_tokens=200
+        )
+
+        sanskrit_text = response.choices[0].message.content.strip()
+
+        # Remove any extra formatting or explanations
+        lines = sanskrit_text.split('\n')
+        sanskrit_lines = [line.strip() for line in lines if line.strip() and any('\u0900' <= c <= '\u097F' for c in line)]
+        sanskrit_text = '\n'.join(sanskrit_lines)
+
+        if sanskrit_text:
+            print(f"\n✓ Fetched Sanskrit text:")
+            print(f"  {sanskrit_text[:80]}...")
+            print()
+            return sanskrit_text
+        else:
+            print("✗ Could not extract Sanskrit text from response")
+            return None
+
+    except Exception as e:
+        print(f"✗ Error fetching Sanskrit text: {e}")
+        return None
+
+
 def generate_image(chapter: Optional[int], verse: int, theme: str) -> bool:
     """Generate image for the specified verse."""
     print(f"\n{'='*60}")
@@ -408,30 +461,37 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Generate everything (text, prompt, image, audio) for Chapter 2, Verse 47
+  # Generate everything - Sanskrit fetched automatically from GPT-4
   verse-generate --chapter 2 --verse 47 --all \\
-    --sanskrit "कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।..." \\
     --chapter-name-en "Sankhya Yoga" \\
     --chapter-name-hi "सांख्य योग"
 
-  # Generate only image prompt (scene description)
-  verse-generate --chapter 3 --verse 10 --prompt \\
-    --sanskrit "सहयज्ञाः प्रजाः सृष्ट्वा..."
+  # Generate everything with custom Sanskrit text
+  verse-generate --chapter 2 --verse 47 --all \\
+    --sanskrit "कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।..." \\
+    --chapter-name-en "Sankhya Yoga"
 
-  # Generate text content (verse file)
+  # Generate only image prompt (Sanskrit fetched automatically)
+  verse-generate --chapter 3 --verse 10 --prompt
+
+  # Generate text content with chapter names
   verse-generate --chapter 3 --verse 10 --text \\
-    --sanskrit "सहयज्ञाः प्रजाः सृष्ट्वा..." \\
-    --chapter-name-en "Karma Yoga"
+    --chapter-name-en "Karma Yoga" \\
+    --chapter-name-hi "कर्म योग"
 
   # Generate only image and audio (requires existing scene description and verse file)
   verse-generate --chapter 2 --verse 47 --image --audio
 
-  # For texts without chapters (Hanuman Chalisa)
+  # For texts without chapters (Hanuman Chalisa) - provide Sanskrit
   verse-generate --verse 15 --all --sanskrit "..." --theme modern-minimalist
 
 Environment Variables:
-  OPENAI_API_KEY      - Required for text/prompt/image generation
+  OPENAI_API_KEY      - Required for text/prompt/image generation and Sanskrit fetching
   ELEVENLABS_API_KEY  - Required for audio generation
+
+Note:
+  If --sanskrit is not provided, it will be automatically fetched from GPT-4 using
+  the chapter and verse numbers. This requires OPENAI_API_KEY to be set.
         """
     )
 
@@ -481,7 +541,7 @@ Environment Variables:
     parser.add_argument(
         "--sanskrit",
         type=str,
-        help="Sanskrit verse text in Devanagari (required for --text or --prompt or --all)",
+        help="Sanskrit verse text in Devanagari (optional - will be fetched from GPT-4 if not provided)",
         metavar="TEXT"
     )
     parser.add_argument(
@@ -516,10 +576,6 @@ Environment Variables:
     generate_prompt_flag = args.all or args.prompt
     generate_image_flag = args.all or args.image
     generate_audio_flag = args.all or args.audio
-
-    # Validate sanskrit is provided when generating text or prompt
-    if (generate_text_flag or generate_prompt_flag) and not args.sanskrit:
-        parser.error("--sanskrit is required when using --text, --prompt, or --all")
 
     # Display header
     print("\n" + "="*60)
@@ -558,6 +614,18 @@ Environment Variables:
             print("Set it in .env file or environment")
             sys.exit(1)
 
+    # Fetch Sanskrit text if needed but not provided
+    sanskrit_text = args.sanskrit
+    if (generate_text_flag or generate_prompt_flag) and not sanskrit_text:
+        print("Sanskrit text not provided. Fetching from GPT-4...")
+        sanskrit_text = fetch_sanskrit_text(args.chapter, args.verse)
+        if not sanskrit_text:
+            print("\n✗ Error: Could not fetch Sanskrit text from GPT-4")
+            print("Please provide the Sanskrit text manually with --sanskrit flag")
+            sys.exit(1)
+        # Update args for display
+        args.sanskrit = sanskrit_text
+
     # Track success
     results = {
         'text': None,
@@ -572,7 +640,7 @@ Environment Variables:
             results['text'] = generate_text(
                 args.chapter,
                 args.verse,
-                args.sanskrit,
+                sanskrit_text,
                 args.chapter_name_en,
                 args.chapter_name_hi
             )
@@ -581,7 +649,7 @@ Environment Variables:
             results['prompt'] = generate_image_prompt(
                 args.chapter,
                 args.verse,
-                args.sanskrit,
+                sanskrit_text,
                 args.chapter_name_en
             )
 
