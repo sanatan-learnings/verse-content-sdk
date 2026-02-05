@@ -39,16 +39,8 @@ The `--all` flag generates:
 
 ## Installation
 
-### From PyPI (Recommended)
-
 ```bash
 pip install verse-content-sdk
-```
-
-### From GitHub
-
-```bash
-pip install git+https://github.com/sanatan-learnings/verse-content-sdk.git
 ```
 
 ### For Development
@@ -61,90 +53,11 @@ pip install -e .
 
 ## Commands
 
-### verse-generate
-
-Orchestrates image and audio generation for a specific verse.
-
-```bash
-# Generate both image and audio
-verse-generate --collection hanuman-chalisa --verse 15 --all --theme modern-minimalist
-
-# Generate only image
-verse-generate --collection sundar-kaand --verse 3 --image --theme modern-minimalist
-
-# Generate only audio
-verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
-
-# List available collections
-verse-generate --list-collections
-```
-
-**[Full documentation](docs/commands/verse-generate.md)**
-
-### verse-images
-
-Generate images using DALL-E 3 for a collection.
-
-```bash
-# Generate all images for a collection and theme
-verse-images --collection hanuman-chalisa --theme modern-minimalist
-
-# Generate specific verse
-verse-images --collection sundar-kaand --theme modern-minimalist --verse chaupai_03
-
-# Regenerate specific image
-verse-images --collection hanuman-chalisa --theme kids-friendly --regenerate verse-15.png
-
-# List available collections
-verse-images --list-collections
-```
-
-**[Full documentation](docs/commands/verse-images.md)**
-
-### verse-audio
-
-Generate audio pronunciations using ElevenLabs for a collection.
-
-```bash
-# Generate all audio for a collection
-verse-audio --collection hanuman-chalisa
-
-# Generate specific verse
-verse-audio --collection sundar-kaand --verse chaupai_03
-
-# Regenerate specific files
-verse-audio --collection hanuman-chalisa --regenerate verse_01_full.mp3,verse_01_slow.mp3
-
-# List available collections
-verse-audio --list-collections
-```
-
-**[Full documentation](docs/commands/verse-audio.md)**
-
-### verse-embeddings
-
-Generate vector embeddings for semantic search. Supports single or multi-collection processing.
-
-```bash
-# Single collection (default)
-verse-embeddings --verses-dir _verses --output data/embeddings.json
-
-# Multi-collection mode (process multiple collections at once)
-verse-embeddings --multi-collection --collections-file ./collections.yml
-
-# Using local models (free)
-verse-embeddings --provider huggingface
-```
-
-**[Full documentation](docs/commands/verse-embeddings.md)** | **[Multi-collection guide](docs/multi-collection.md)**
-
-### verse-deploy
-
-Deploy Cloudflare Worker for API proxy.
-
-```bash
-verse-deploy
-```
+- **[verse-generate](docs/commands/verse-generate.md)** - Orchestrate image and audio generation for specific verses
+- **[verse-images](docs/commands/verse-images.md)** - Generate images using DALL-E 3
+- **[verse-audio](docs/commands/verse-audio.md)** - Generate audio pronunciations using ElevenLabs
+- **[verse-embeddings](docs/commands/verse-embeddings.md)** - Generate vector embeddings for semantic search ([multi-collection guide](docs/multi-collection.md))
+- **verse-deploy** - Deploy Cloudflare Worker for API proxy
 
 ## Configuration
 
@@ -237,57 +150,9 @@ sundar-kaand:
 
 **For 700 verses** (complete Bhagavad Gita): **~$42**
 
-## Examples
+## Batch Processing
 
-### Generate Media for a Verse
-
-Generate image and audio for a specific verse:
-
-```bash
-# Generate both image and audio
-verse-generate --collection hanuman-chalisa --verse 15 --all --theme modern-minimalist
-
-# Review generated files
-ls images/hanuman-chalisa/modern-minimalist/verse-15.png
-ls audio/hanuman-chalisa/verse_15_full.mp3
-ls audio/hanuman-chalisa/verse_15_slow.mp3
-```
-
-### Generate Media for an Entire Collection
-
-Generate all images for a collection:
-
-```bash
-# Generate all images for a theme
-verse-images --collection sundar-kaand --theme modern-minimalist
-
-# Review generated files
-ls images/sundar-kaand/modern-minimalist/
-```
-
-Generate all audio for a collection:
-
-```bash
-# Generate all audio
-verse-audio --collection sankat-mochan-hanumanashtak
-
-# Review generated files
-ls audio/sankat-mochan-hanumanashtak/
-```
-
-### Generate Embeddings for Search
-
-```bash
-# Generate embeddings for all collections
-verse-embeddings --multi-collection --collections-file _data/collections.yml
-
-# Review generated file
-cat data/embeddings.json
-```
-
-### Batch Process Multiple Verses
-
-Generate media for verses 1-10:
+Generate media for multiple verses:
 
 ```bash
 for i in {1..10}; do
@@ -298,22 +163,14 @@ done
 
 ## Documentation
 
-### User Guides
+- **[Command Reference](docs/README.md)** - Detailed documentation for all commands
+- **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
+- **[Multi-Collection Guide](docs/multi-collection.md)** - Working with multiple collections
+- **[Publishing Guide](docs/publishing.md)** - For maintainers
 
-- **[Main Documentation](docs/README.md)** - Overview and quick start
-- **[verse-generate](docs/commands/verse-generate.md)** - Complete verse generation
-- **[verse-images](docs/commands/verse-images.md)** - Image generation
-- **[verse-audio](docs/commands/verse-audio.md)** - Audio generation
-- **[verse-embeddings](docs/commands/verse-embeddings.md)** - Embeddings generation
-- **[Troubleshooting](docs/troubleshooting.md)** - Common issues
+## Example Project
 
-### For Maintainers
-
-- **[Publishing to PyPI](docs/publishing.md)** - How to publish new releases
-
-## Example Projects
-
-- [Hanuman Chalisa](https://github.com/sanatan-learnings/hanuman-chalisa) - Multi-collection project with Hanuman Chalisa, Sundar Kaand, and Sankat Mochan Hanumanashtak
+[Hanuman Chalisa](https://github.com/sanatan-learnings/hanuman-chalisa) - Multi-collection project with Hanuman Chalisa, Sundar Kaand, and Sankat Mochan Hanumanashtak
 
 ## Requirements
 

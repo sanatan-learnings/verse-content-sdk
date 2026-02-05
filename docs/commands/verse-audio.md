@@ -5,7 +5,7 @@ Generate audio pronunciations for verses using ElevenLabs text-to-speech.
 ## Synopsis
 
 ```bash
-verse-audio [OPTIONS]
+verse-audio --collection COLLECTION [OPTIONS]
 ```
 
 ## Description
@@ -16,62 +16,73 @@ The `verse-audio` command generates pronunciation audio files using ElevenLabs' 
 
 ## Options
 
-- `--verses-dir PATH` - Path to verses directory (default: `_verses/`)
-- `--output-dir PATH` - Path to output directory (default: `audio/`)
+### Required
+
+- `--collection NAME` - Collection key (e.g., `hanuman-chalisa`, `sundar-kaand`)
+
+### Optional
+
+- `--verse ID` - Generate audio for specific verse only
 - `--voice-id ID` - ElevenLabs voice ID (default: pre-configured voice)
 - `--regenerate FILE[,FILE...]` - Regenerate specific audio files
 - `--force` - Regenerate all audio files (prompts for confirmation)
-- `--start-from FILE` - Start generation from specific file
+- `--list-collections` - List all available collections
 
 ## Examples
 
-### Generate All Audio
+### List Available Collections
 
 ```bash
-verse-audio
+verse-audio --list-collections
 ```
 
-Scans `_verses/` directory and generates audio for all verses that don't have audio files yet.
+### Generate All Audio for a Collection
+
+```bash
+verse-audio --collection hanuman-chalisa
+```
+
+Scans `_verses/hanuman-chalisa/` directory and generates audio for all verses that don't have audio files yet.
+
+### Generate Specific Verse
+
+```bash
+verse-audio --collection sundar-kaand --verse chaupai_03
+```
 
 ### Regenerate Specific Files
 
 ```bash
 # Single file
-verse-audio --regenerate chapter_01_verse_01_full.mp3
+verse-audio --collection hanuman-chalisa --regenerate verse_01_full.mp3
 
 # Multiple files
-verse-audio --regenerate chapter_01_verse_01_full.mp3,chapter_01_verse_01_slow.mp3
+verse-audio --collection hanuman-chalisa --regenerate verse_01_full.mp3,verse_01_slow.mp3
 
-# Regenerate both speeds for a verse
-verse-audio --regenerate chapter_02_verse_47_full.mp3,chapter_02_verse_47_slow.mp3
+# Different collection
+verse-audio --collection sundar-kaand --regenerate chaupai_03_full.mp3,chaupai_03_slow.mp3
 ```
-
-### Resume from Specific Verse
-
-```bash
-verse-audio --start-from chapter_05_verse_10_full.mp3
-```
-
-Useful for resuming generation after interruption.
 
 ### Force Regenerate All
 
 ```bash
-verse-audio --force
+verse-audio --collection hanuman-chalisa --force
 ```
 
 This will prompt for confirmation before regenerating all audio files.
 
 ## Generated Files
 
-For each verse, two MP3 files are created:
+For each verse, two MP3 files are created in `audio/<collection-key>/`:
 
-- `chapter_XX_verse_YY_full.mp3` - Full speed (normal)
-- `chapter_XX_verse_YY_slow.mp3` - Slow speed (0.75x)
+- `verse_NN_full.mp3` - Full speed (normal)
+- `verse_NN_slow.mp3` - Slow speed (0.75x)
 
-Naming for texts without chapters (e.g., Hanuman Chalisa):
-- `verse_XX_full.mp3`
-- `verse_XX_slow.mp3`
+Example paths:
+- `audio/hanuman-chalisa/verse_01_full.mp3`
+- `audio/hanuman-chalisa/verse_01_slow.mp3`
+- `audio/sundar-kaand/chaupai_03_full.mp3`
+- `audio/sundar-kaand/chaupai_03_slow.mp3`
 
 ## Voice Configuration
 
@@ -101,21 +112,21 @@ The command reads this field and generates audio pronunciation.
 
 ```bash
 # 1. Ensure verse files exist with devanagari field
-cat _verses/chapter_01_verse_01.md
+cat _verses/hanuman-chalisa/verse_01.md
 
 # 2. Generate audio
-verse-audio
+verse-audio --collection hanuman-chalisa
 
 # 3. Verify files
-ls -lh audio/chapter_01_verse_01_*.mp3
+ls -lh audio/hanuman-chalisa/verse_01_*.mp3
 
 # 4. Test audio playback
-afplay audio/chapter_01_verse_01_full.mp3  # macOS
-mpg123 audio/chapter_01_verse_01_full.mp3  # Linux
+afplay audio/hanuman-chalisa/verse_01_full.mp3  # macOS
+mpg123 audio/hanuman-chalisa/verse_01_full.mp3  # Linux
 
 # 5. Commit
 git add audio/
-git commit -m "Add audio pronunciations"
+git commit -m "Add audio pronunciations for Hanuman Chalisa"
 ```
 
 ## Cost
@@ -139,7 +150,8 @@ Very affordable compared to image generation.
 ## Requirements
 
 - `ELEVENLABS_API_KEY` environment variable
-- Verse files in `_verses/` with `devanagari:` field populated
+- Verse files in `_verses/<collection-key>/` with `devanagari:` field populated
+- Collection enabled in `_data/collections.yml`
 - ElevenLabs account with sufficient credits
 
 ## Notes

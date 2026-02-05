@@ -5,58 +5,71 @@ Generate images for verses using DALL-E 3 based on scene descriptions.
 ## Synopsis
 
 ```bash
-verse-images --theme-name THEME [OPTIONS]
+verse-images --collection COLLECTION --theme THEME [OPTIONS]
 ```
 
 ## Description
 
-The `verse-images` command generates artwork for verses using OpenAI's DALL-E 3 API. It reads scene descriptions from `docs/image-prompts.md` and creates images styled according to a theme configuration.
+The `verse-images` command generates artwork for verses using OpenAI's DALL-E 3 API. It reads scene descriptions from `docs/image-prompts/<collection-key>.md` and creates images styled according to a theme configuration.
 
 ## Options
 
 ### Required
 
-- `--theme-name NAME` - Theme name (must have corresponding `docs/themes/NAME.yml`)
+- `--collection NAME` - Collection key (e.g., `hanuman-chalisa`, `sundar-kaand`)
+- `--theme NAME` - Theme name (must have corresponding `docs/themes/<collection-key>/<theme-name>.yml`)
 
 ### Optional
 
+- `--verse ID` - Generate image for specific verse only
 - `--regenerate FILE[,FILE...]` - Regenerate specific image files
 - `--force` - Regenerate all images (prompts for confirmation)
-- `--prompts-file PATH` - Custom path to image prompts file (default: `docs/image-prompts.md`)
-- `--output-dir PATH` - Custom output directory (default: `images/THEME_NAME/`)
+- `--list-collections` - List all available collections
 
 ## Examples
 
-### Generate All Images
+### List Available Collections
 
 ```bash
-verse-images --theme-name modern-minimalist
+verse-images --list-collections
 ```
 
-This reads all scene descriptions from `docs/image-prompts.md` and generates images that don't already exist.
+### Generate All Images for a Collection
+
+```bash
+verse-images --collection hanuman-chalisa --theme modern-minimalist
+```
+
+This reads all scene descriptions from `docs/image-prompts/hanuman-chalisa.md` and generates images that don't already exist.
+
+### Generate Specific Verse
+
+```bash
+verse-images --collection sundar-kaand --theme modern-minimalist --verse chaupai_03
+```
 
 ### Regenerate Specific Images
 
 ```bash
 # Single image
-verse-images --theme-name modern-minimalist --regenerate chapter-01-verse-01.png
+verse-images --collection hanuman-chalisa --theme kids-friendly --regenerate verse-15.png
 
 # Multiple images
-verse-images --theme-name modern-minimalist \
-  --regenerate chapter-01-verse-01.png,chapter-01-verse-02.png
+verse-images --collection hanuman-chalisa --theme modern-minimalist \
+  --regenerate verse-01.png,verse-02.png
 ```
 
 ### Force Regenerate All
 
 ```bash
-verse-images --theme-name modern-minimalist --force
+verse-images --collection hanuman-chalisa --theme modern-minimalist --force
 ```
 
 This will prompt for confirmation before regenerating all images.
 
 ## Theme Configuration
 
-Themes are defined in `docs/themes/THEME_NAME.yml`:
+Themes are defined per collection in `docs/themes/<collection-key>/<theme-name>.yml`:
 
 ```yaml
 name: modern-minimalist
@@ -73,6 +86,10 @@ size: 1024x1792        # Portrait format
 quality: standard      # Options: standard, hd
 style: natural         # Options: natural, vivid
 ```
+
+Example paths:
+- `docs/themes/hanuman-chalisa/modern-minimalist.yml`
+- `docs/themes/sundar-kaand/kids-friendly.yml`
 
 ### Theme Options
 
@@ -91,17 +108,21 @@ style: natural         # Options: natural, vivid
 
 ## Scene Descriptions
 
-Scene descriptions are stored in `docs/image-prompts.md`:
+Scene descriptions are stored per collection in `docs/image-prompts/<collection-key>.md`:
 
 ```markdown
-### Chapter 1, Verse 1
+### Verse 1
 
 **Scene Description**:
-A vast battlefield at Kurukshetra stretches endlessly under a dramatic sky.
-Two massive armies face each other - the Kauravas on one side and the Pandavas
-on the other, with thousands of warriors, chariots, elephants, and flags visible
-in organized formations. [...]
+Lord Hanuman standing majestically at the entrance of a serene temple, bathed
+in the golden light of dawn. His form radiates divine energy with a gentle
+glow surrounding him. He holds a gada (mace) in one hand while the other is
+raised in blessing. [...]
 ```
+
+Example paths:
+- `docs/image-prompts/hanuman-chalisa.md`
+- `docs/image-prompts/sundar-kaand.md`
 
 ### Writing Good Scene Descriptions
 
@@ -113,18 +134,23 @@ in organized formations. [...]
 
 ## Generated Files
 
-Images are saved to: `images/THEME_NAME/chapter-XX-verse-YY.png`
+Images are saved to: `images/<collection-key>/<theme-name>/verse-NN.png`
 
 Format:
 - Portrait: 1024x1792 (recommended for mobile/web display)
 - Quality: Standard or HD based on theme config
 - Format: PNG
 
+Example paths:
+- `images/hanuman-chalisa/modern-minimalist/verse-01.png`
+- `images/sundar-kaand/kids-friendly/chaupai_03.png`
+
 ## Workflow
 
 ```bash
-# 1. Create theme configuration
-cat > docs/themes/mystical-art.yml << EOF
+# 1. Create theme configuration for a collection
+mkdir -p docs/themes/hanuman-chalisa
+cat > docs/themes/hanuman-chalisa/mystical-art.yml << EOF
 name: mystical-art
 style_modifier: |
   Mystical spiritual art with ethereal lighting...
@@ -133,17 +159,17 @@ quality: standard
 style: natural
 EOF
 
-# 2. Add scene descriptions to docs/image-prompts.md
-# (Can be done manually or via verse-generate --prompt)
+# 2. Add scene descriptions to docs/image-prompts/hanuman-chalisa.md
+# (Must be created manually with scene descriptions for each verse)
 
 # 3. Generate images
-verse-images --theme-name mystical-art
+verse-images --collection hanuman-chalisa --theme mystical-art
 
 # 4. Review images
-open images/mystical-art/
+open images/hanuman-chalisa/mystical-art/
 
 # 5. Regenerate specific images if needed
-verse-images --theme-name mystical-art --regenerate chapter-01-verse-05.png
+verse-images --collection hanuman-chalisa --theme mystical-art --regenerate verse-05.png
 ```
 
 ## Cost
@@ -158,8 +184,9 @@ For 700 verses (complete Bhagavad Gita):
 ## Requirements
 
 - `OPENAI_API_KEY` environment variable
-- Scene descriptions in `docs/image-prompts.md`
-- Theme configuration in `docs/themes/THEME_NAME.yml`
+- Scene descriptions in `docs/image-prompts/<collection-key>.md`
+- Theme configuration in `docs/themes/<collection-key>/<theme-name>.yml`
+- Collection enabled in `_data/collections.yml`
 
 ## Notes
 

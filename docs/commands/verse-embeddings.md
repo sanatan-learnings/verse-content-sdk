@@ -5,47 +5,75 @@ Generate vector embeddings for semantic search and RAG (Retrieval Augmented Gene
 ## Synopsis
 
 ```bash
+# Single collection mode
 verse-embeddings --verses-dir PATH --output PATH [OPTIONS]
+
+# Multi-collection mode
+verse-embeddings --multi-collection --collections-file PATH [OPTIONS]
 ```
 
 ## Description
 
-The `verse-embeddings` command generates vector embeddings for all verses, enabling semantic search and AI-powered guidance features. It supports two providers:
-- **OpenAI** (recommended): Higher quality, requires API key
-- **HuggingFace** (free): Local models, no API key needed
+The `verse-embeddings` command generates vector embeddings for verses, enabling semantic search and AI-powered guidance features. It supports:
+- **Single collection mode**: Process one collection at a time
+- **Multi-collection mode**: Process multiple collections at once
+- **OpenAI provider** (recommended): Higher quality, requires API key
+- **HuggingFace provider** (free): Local models, no API key needed
 
 ## Options
 
-### Required
+### Single Collection Mode
 
 - `--verses-dir PATH` - Path to verses directory (e.g., `_verses/`)
 - `--output PATH` - Output JSON file path (e.g., `data/embeddings.json`)
 
-### Optional
+### Multi-Collection Mode
+
+- `--multi-collection` - Enable multi-collection processing
+- `--collections-file PATH` - Path to collections.yml file (default: `_data/collections.yml`)
+- `--output PATH` - Output JSON file path (default: `data/embeddings.json`)
+
+### Common Options
 
 - `--provider PROVIDER` - Embedding provider: `openai` or `huggingface` (default: `openai`)
 - `--model MODEL` - Model to use (provider-specific)
 
 ## Examples
 
-### Using OpenAI (Recommended)
+### Multi-Collection Mode (Recommended)
+
+Process all enabled collections at once:
 
 ```bash
-verse-embeddings --verses-dir _verses --output data/embeddings.json
+# Using OpenAI (recommended for quality)
+verse-embeddings --multi-collection --collections-file _data/collections.yml
+
+# Using HuggingFace (free, local)
+verse-embeddings --multi-collection --collections-file _data/collections.yml --provider huggingface
 ```
 
-Uses OpenAI's `text-embedding-3-small` model:
+This processes all collections with `enabled: true` in `collections.yml` and creates a unified embeddings file at `data/embeddings.json`.
+
+### Single Collection Mode
+
+Process one collection at a time:
+
+```bash
+# Using OpenAI (recommended)
+verse-embeddings --verses-dir _verses/hanuman-chalisa --output data/embeddings.json
+
+# Using HuggingFace (free)
+verse-embeddings --verses-dir _verses/hanuman-chalisa --output data/embeddings.json --provider huggingface
+```
+
+### Provider Comparison
+
+**OpenAI** (`text-embedding-3-small`):
 - 1536 dimensions
 - High quality semantic understanding
-- Cost: ~$0.10 for complete Bhagavad Gita (one-time)
+- Cost: ~$0.10 for 700 verses (one-time)
 
-### Using Local Models (Free)
-
-```bash
-verse-embeddings --verses-dir _verses --output data/embeddings.json --provider huggingface
-```
-
-Uses sentence-transformers `all-MiniLM-L6-v2` model:
+**HuggingFace** (`all-MiniLM-L6-v2`):
 - 384 dimensions
 - Good quality, runs locally
 - No API key or cost
@@ -55,20 +83,50 @@ Uses sentence-transformers `all-MiniLM-L6-v2` model:
 
 Creates a JSON file with embeddings for all verses:
 
+### Multi-Collection Output
+
 ```json
 {
   "embeddings": [
     {
-      "chapter": 1,
-      "verse": 1,
-      "verse_id": "chapter_01_verse_01",
+      "collection": "hanuman-chalisa",
+      "verse_id": "verse_01",
+      "text": "Combined verse text...",
+      "embedding": [0.123, -0.456, ...]
+    },
+    {
+      "collection": "sundar-kaand",
+      "verse_id": "chaupai_01",
       "text": "Combined verse text...",
       "embedding": [0.123, -0.456, ...]
     },
     ...
   ],
   "metadata": {
-    "total_verses": 700,
+    "total_verses": 150,
+    "collections": ["hanuman-chalisa", "sundar-kaand"],
+    "provider": "openai",
+    "model": "text-embedding-3-small",
+    "dimensions": 1536,
+    "generated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+### Single Collection Output
+
+```json
+{
+  "embeddings": [
+    {
+      "verse_id": "verse_01",
+      "text": "Combined verse text...",
+      "embedding": [0.123, -0.456, ...]
+    },
+    ...
+  ],
+  "metadata": {
+    "total_verses": 40,
     "provider": "openai",
     "model": "text-embedding-3-small",
     "dimensions": 1536,
@@ -93,35 +151,57 @@ This creates rich semantic embeddings that capture the full meaning of each vers
 
 ## Workflow
 
-```bash
-# 1. Generate embeddings (one-time setup)
-verse-embeddings --verses-dir _verses --output data/embeddings.json
+### Multi-Collection Workflow
 
-# 2. Verify output
+```bash
+# 1. Ensure collections are configured
+cat _data/collections.yml
+
+# 2. Generate embeddings (one-time setup)
+verse-embeddings --multi-collection --collections-file _data/collections.yml
+
+# 3. Verify output
 ls -lh data/embeddings.json
 cat data/embeddings.json | jq '.metadata'
 
-# 3. Use in your application
+# 4. Use in your application
 # The embeddings file is loaded client-side for semantic search
 
-# 4. Regenerate after adding new verses
-verse-embeddings --verses-dir _verses --output data/embeddings.json
+# 5. Regenerate after adding new verses or collections
+verse-embeddings --multi-collection --collections-file _data/collections.yml
+```
+
+### Single Collection Workflow
+
+```bash
+# 1. Generate embeddings for specific collection
+verse-embeddings --verses-dir _verses/hanuman-chalisa --output data/hanuman-chalisa-embeddings.json
+
+# 2. Verify output
+cat data/hanuman-chalisa-embeddings.json | jq '.metadata'
 ```
 
 ## Integration Example
 
-Client-side semantic search (JavaScript):
+Client-side semantic search with multi-collection support (JavaScript):
 
 ```javascript
 // Load embeddings
 const response = await fetch('/data/embeddings.json');
-const { embeddings } = await response.json();
+const { embeddings, metadata } = await response.json();
 
-// Search for relevant verses
-function findRelevantVerses(query, topK = 3) {
+console.log(`Loaded ${metadata.total_verses} verses from ${metadata.collections?.length || 1} collection(s)`);
+
+// Search for relevant verses (works with both single and multi-collection)
+function findRelevantVerses(query, topK = 3, filterCollection = null) {
   const queryEmbedding = await generateEmbedding(query);
 
-  const scores = embeddings.map(verse => ({
+  let filtered = embeddings;
+  if (filterCollection) {
+    filtered = embeddings.filter(v => v.collection === filterCollection);
+  }
+
+  const scores = filtered.map(verse => ({
     ...verse,
     score: cosineSimilarity(queryEmbedding, verse.embedding)
   }));
@@ -130,6 +210,12 @@ function findRelevantVerses(query, topK = 3) {
     .sort((a, b) => b.score - a.score)
     .slice(0, topK);
 }
+
+// Search across all collections
+const results = await findRelevantVerses("devotion and strength");
+
+// Search within specific collection
+const hanumanResults = await findRelevantVerses("devotion", 5, "hanuman-chalisa");
 ```
 
 ## Cost & Performance
@@ -185,10 +271,19 @@ function findRelevantVerses(query, topK = 3) {
 ## Notes
 
 - Embeddings are generated once and reused (no need to regenerate on every query)
-- Regenerate embeddings when adding new verses
+- Regenerate embeddings when adding new verses or collections
 - The output JSON file can be loaded client-side (semantic search runs in browser)
+- Multi-collection mode processes all enabled collections in `collections.yml`
 - OpenAI embeddings are recommended for production (better quality)
 - HuggingFace is great for development and testing (free, no API needed)
+- Multi-collection output includes `collection` field for filtering
+
+## See Also
+
+- [Multi-Collection Guide](../multi-collection.md) - Detailed guide on working with multiple collections
+- [OpenAI Embeddings Documentation](https://platform.openai.com/docs/guides/embeddings)
+- [sentence-transformers Documentation](https://www.sbert.net/)
+- [Troubleshooting](../troubleshooting.md) - Common issues
 
 ## Troubleshooting
 
